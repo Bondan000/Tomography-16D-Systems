@@ -76,8 +76,8 @@ Prediction(DM, State) = State' * DM * State;
 
 #Here are the specific states and data measured in the tomography experiment
 
-#test = readdlm("D:\\Binto\\ddd\\Julia\\Tomography_Mathematica_to_Julia\\measurement_bases_full_edit_measurement_7.txt", skipstart=2);
-D2Array = readdlm("D:\\Binto\\ddd\\Julia\\Tomography_Mathematica_to_Julia\\measurement_bases_full_edit_measurement_7.txt", skipstart=2)[1:end,2:17];
+#test = readdlm(download("https://raw.githubusercontent.com/Bondan000/Tomography-16D-Systems/master/measurement_bases_full_edit_measurement_7.txt"), skipstart=2);
+D2Array = readdlm(download("https://raw.githubusercontent.com/Bondan000/Tomography-16D-Systems/master/measurement_bases_full_edit_measurement_7.txt"), skipstart=2)[1:end,2:17];
 Data = collect(flatten(D2Array));
 SigmaData = sqrt.(Data);
 
