@@ -3,12 +3,15 @@
 
 using Base.Iterators, LinearAlgebra;
 #using DataFrames;
+using JuMP;
 import DelimitedFiles.readdlm;
 
+#Create a JuMP model
+model = Model();
 
 #Here is the tensor product definition
 #CircleTimes = kron;
-tp(m1, m2) = flatten(m1 .* m2);
+tp(m1, m2) = partition(flatten(m1 .* m2),2);
 
 n=16;
 #Define the single qubit measurements, R is the state with "-i"..
@@ -25,6 +28,7 @@ PauliMatrix_1 = [0 1; 1 0];
 Trafo = kron(HadamardMatrix_2, Matrix{Float64}(I, 2,2), Matrix{Float64}(I, 2,2), PauliMatrix_1 * HadamardMatrix_2);
 NDimensions = 16;
 
+#=
 t1,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14,t15,t16,t17,t18,t19,t20,t21,t22,t23,t24,t25,t26,t27,t28,t29,t30,
 t31,t32,t33,t34,t35,t36,t37,t38,t39,t40,t41,t42,t43,t44,t45,t46,t47,t48,t49,t50,t51,t52,t53,t54,t55,t56,t57,t58,t59,t60,
 t61,t62,t63,t64,t65,t66,t67,t68,t69,t70,t71,t72,t73,t74,t75,t76,t77,t78,t79,t80,t81,t82,t83,t84,t85,t86,t87,t88,t89,t90,
@@ -33,8 +37,7 @@ t121,t122,t123,t124,t125,t126,t127,t128,t129,t130,t131,t132,t133,t134,t135,t136,
 t151,t152,t153,t154,t155,t156,t157,t158,t159,t160,t161,t162,t163,t164,t165,t166,t167,t168,t169,t170,t171,t172,t173,t174,t175,t176,t177,t178,t179,t180,
 t181,t182,t183,t184,t185,t186,t187,t188,t189,t190,t191,t192,t193,t194,t195,t196,t197,t198,t199,t200,t201,t202,t203,t204,t205,t206,t207,t208,t209,t210,
 t211,t212,t213,t214,t215,t216,t217,t218,t219,t220,t221,t222,t223,t224,t225,t226,t227,t228,t229,t230,t231,t232,t233,t234,t235,t236,t237,t238,t239,t240,
-t241,t242,t243,t244,t245,t246,t247,t248,t249,t250,t251,t252,t253,t254,t255,t256 = zeros(Float64, 256);
-
+t241,t242,t243,t244,t245,t246,t247,t248,t249,t250,t251,t252,t253,t254,t255,t256 = ones(Float64, 256);
 
 pM = [t1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0;
    t17 + im*t18 t2 0 0 0 0 0 0 0 0 0 0 0 0 0 0;
@@ -71,17 +74,57 @@ pMd = [t1 t17 - im*t18 t47 - im*t48 t75 - im*t76 t101 - im*t102 t125 - im*t126 t
     0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 t16];
 
 tvector = string.("t", collect(1:16^2));
+=#
+t=0;
+@variable(model, (-10.0)<= t[1:256] <= (10.0));
+
+@expression(model, begin
+    
+pM = @NLexpression(model, [t[1] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0;
+   t[17] + im*t[18] t[2] 0 0 0 0 0 0 0 0 0 0 0 0 0 0;
+   t[47] + im*t[48] t[19] + im*t[20] t[3] 0 0 0 0 0 0 0 0 0 0 0 0 0;
+   t[75] + im*t[76] t[49] + im*t[50] t[21] + im*t[22] t[4] 0 0 0 0 0 0 0 0 0 0 0 0;
+   t[101] + im*t[102] t[77] + im*t[78] t[51] + im*t[52] t[23] + im*t[24] t[5] 0 0 0 0 0 0 0 0 0 0 0;
+   t[125] + im*t[126] t[103] + im*t[104] t[79] + im*t[80] t[53] + im*t[54] t[25] + im*t[26] t[6] 0 0 0 0 0 0 0 0 0 0;
+   t[147] + im*t[148] t[127] + im*t[128] t[105] + im*t[106] t[81] + im*t[82] t[55] + im*t[56] t[27] + im*t[28] t[7] 0 0 0 0 0 0 0 0 0;
+   t[167] + im*t[168] t[149] + im*t[150] t[129] + im*t[130] t[107] + im*t[108] t[83] + im*t[84] t[57] + im*t[58] t[29] + im*t[30] t[8] 0 0 0 0 0 0 0 0;
+   t[185] + im*t[186] t[169] + im*t[170] t[151] + im*t[152] t[131] + im*t[132] t[109] + im*t[110] t[85] + im*t[86] t[59] + im*t[60] t[31] + im*t[32] t[9] 0 0 0 0 0 0 0;
+   t[201] + im*t[202] t[187] + im*t[188] t[171] + im*t[172] t[153] + im*t[154] t[133] + im*t[134] t[111] + im*t[112] t[87] + im*t[88] t[61] + im*t[62] t[33] + im*t[34] t[10] 0 0 0 0 0 0;
+   t[215] + im*t[216] t[203] + im*t[204] t[189] + im*t[190] t[173] + im*t[174] t[155] + im*t[156] t[135] + im*t[136] t[113] + im*t[114] t[89] + im*t[90] t[63] + im*t[64] t[35] + im*t[36] t[11] 0 0 0 0 0;
+   t[227] + im*t[228] t[217] + im*t[218] t[205] + im*t[206] t[191] + im*t[192] t[175] + im*t[176] t[157] + im*t[158] t[137] + im*t[138] t[115] + im*t[116] t[91] + im*t[92] t[65] + im*t[66] t[37] + im*t[38] t[12] 0 0 0 0;
+   t[237] + im*t[238] t[229] + im*t[230] t[219] + im*t[220] t[207] + im*t[208] t[193] + im*t[194] t[177] + im*t[178] t[159] + im*t[160] t[139] + im*t[140] t[117] + im*t[118] t[93] + im*t[94] t[67] + im*t[68] t[39] + im*t[40] t[13] 0 0 0;
+   t[245] + im*t[246] t[239] + im*t[240] t[231] + im*t[232] t[221] + im*t[222] t[209] + im*t[210] t[195] + im*t[196] t[179] + im*t[180] t[161] + im*t[162] t[141] + im*t[142] t[119] + im*t[120] t[95] + im*t[96] t[69] + im*t[70] t[41] + im*t[42] t[14] 0 0;
+   t[251] + im*t[252] t[247] + im*t[248] t[241] + im*t[242] t[233] + im*t[234] t[223] + im*t[224] t[211] + im*t[212] t[197] + im*t[198] t[181] + im*t[182] t[163] + im*t[164] t[143] + im*t[144] t[121] + im*t[122] t[97] + im*t[98] t[71] + im*t[72] t[43] + im*t[44] t[15] 0;
+   t[255] + im*t[256] t[253] + im*t[254] t[249] + im*t[250] t[243] + im*t[244] t[235] + im*t[236] t[225] + im*t[226] t[213] + im*t[214] t[199] + im*t[200] t[183] + im*t[184] t[165] + im*t[166] t[145] + im*t[146] t[123] + im*t[124] t[99] + im*t[100] t[73] + im*t[74] t[45] + im*t[46] t[16]];)
+
+pMd = [t[1] t[17] - im*t[18] t[47] - im*t[48] t[75] - im*t[76] t[101] - im*t[102] t[125] - im*t[126] t[147] - im*t[148] t[167] - im*t[168] t[185] - im*t[186] t[201] - im*t[202] t[215] - im*t[216] t[227] - im*t[228] t[237] - im*t[238] t[245] - im*t[246] t[251] - im*t[252] t[255] - im*t[256];
+    0 t[2] t[19] - im*t[20] t[49] - im*t[50] t[77] - im*t[78] t[103] - im*t[104] t[127] - im*t[128] t[149] - im*t[150] t[169] - im*t[170] t[187] - im*t[188] t[203] - im*t[204] t[217] - im*t[218] t[229] - im*t[230] t[239] - im*t[240] t[247] - im*t[248] t[253] - im*t[254];
+    0 0 t[3] t[21] - im*t[22] t[51] - im*t[52] t[79] - im*t[80] t[105] - im*t[106] t[129] - im*t[130] t[151] - im*t[152] t[171] - im*t[172] t[189] - im*t[190] t[205] - im*t[206] t[219] - im*t[220] t[231] - im*t[232] t[241] - im*t[242] t[249] - im*t[250];
+    0 0 0 t[4] t[23] - im*t[24] t[53] - im*t[54] t[81] - im*t[82] t[107] - im*t[108] t[131] - im*t[132] t[153] - im*t[154] t[173] - im*t[174] t[191] - im*t[192] t[207] - im*t[208] t[221] - im*t[222] t[233] - im*t[234] t[243] - im*t[244];
+    0 0 0 0 t[5] t[25] - im*t[26] t[55] - im*t[56] t[83] - im*t[84] t[109] - im*t[110] t[133] - im*t[134] t[155] - im*t[156] t[175] - im*t[176] t[193] - im*t[194] t[209] - im*t[210] t[223] - im*t[224] t[235] - im*t[236];
+    0 0 0 0 0 t[6] t[27] - im*t[28] t[57] - im*t[58] t[85] - im*t[86] t[111] - im*t[112] t[135] - im*t[136] t[157] - im*t[158] t[177] - im*t[178] t[195] - im*t[196] t[211] - im*t[212] t[225] - im*t[226];
+    0 0 0 0 0 0 t[7] t[29] - im*t[30] t[59] - im*t[60] t[87] - im*t[88] t[113] - im*t[114] t[137] - im*t[138] t[159] - im*t[160] t[179] - im*t[180] t[197] - im*t[198] t[213] - im*t[214];
+    0 0 0 0 0 0 0 t[8] t[31] - im*t[32] t[61] - im*t[62] t[89] - im*t[90] t[115] - im*t[116] t[139] - im*t[140] t[161] - im*t[162] t[181] - im*t[182] t[199] - im*t[200];
+    0 0 0 0 0 0 0 0 t[9] t[33] - im*t[34] t[63] - im*t[64] t[91] - im*t[92] t[117] - im*t[118] t[141] - im*t[142] t[163] - im*t[164] t[183] - im*t[184];
+    0 0 0 0 0 0 0 0 0 t[10] t[35] - im*t[36] t[65] - im*t[66] t[93] - im*t[94] t[119] - im*t[120] t[143] - im*t[144] t[165] - im*t[166];
+    0 0 0 0 0 0 0 0 0 0 t[11] t[37] - im*t[38] t[67] - im*t[68] t[95] - im*t[96] t[121] - im*t[122] t[145] - im*t[146];
+    0 0 0 0 0 0 0 0 0 0 0 t[12] t[39] - im*t[40] t[69] - im*t[70] t[97] - im*t[98] t[123] - im*t[124];
+    0 0 0 0 0 0 0 0 0 0 0 0 t[13] t[41] - im*t[42] t[71] - im*t[72] t[99] - im*t[100];
+    0 0 0 0 0 0 0 0 0 0 0 0 0 t[14] t[43] - im*t[44] t[73] - im*t[74];
+    0 0 0 0 0 0 0 0 0 0 0 0 0 0 t[15] t[45] - im*t[46];
+    0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 t[16]];
+end)
 GeneralDM = pMd*pM;
 Prediction(DM, State) = State' * DM * State;
 
 #Here are the specific states and data measured in the tomography experiment
 
-#test = readdlm(download("https://raw.githubusercontent.com/Bondan000/Tomography-16D-Systems/master/measurement_bases_full_edit_measurement_7.txt"), skipstart=2);
-D2Array = readdlm(download("https://raw.githubusercontent.com/Bondan000/Tomography-16D-Systems/master/measurement_bases_full_edit_measurement_7.txt"), skipstart=2)[1:end,2:17];
+#test = readdlm("D:\\Binto\\ddd\\Julia\\Tomography_Mathematica_to_Julia\\measurement_bases_full_edit_measurement_7.txt", skipstart=2);
+D2Array = readdlm("D:\\Binto\\ddd\\Julia\\Tomography_Mathematica_to_Julia\\measurement_bases_full_edit_measurement_7.txt", skipstart=2)[1:end,2:17];
 Data = collect(flatten(D2Array));
 SigmaData = sqrt.(Data);
 
-StateMeasured = [kron(H, H, H, H), kron(H, H, H, V), kron(H, H, V, H), kron(H, H, V, V), kron(H, V, H, H), kron(H, V, H, V),
+#=StateMeasured = [kron(H, H, H, H), kron(H, H, H, V), kron(H, H, V, H), kron(H, H, V, V), kron(H, V, H, H), kron(H, V, H, V),
                 kron(H, V, V, H), kron(H, V, V, V), kron(V, H, H, H), kron(V, H, H, V), kron(V, H, V, H), kron(V, H, V, V),
                 kron(V, V, H, H), kron(V, V, H, V), kron(V, V, V, H), kron(V, V, V, V), kron(H, H, H, Dia), kron(H, H, H, A),
                 kron(H, H, V, Dia), kron(H, H, V, A), kron(H, V, H, Dia), kron(H, V, H, A), kron(H, V, V, Dia), kron(H, V, V, A),
@@ -296,7 +339,9 @@ StateMeasured = [kron(H, H, H, H), kron(H, H, H, V), kron(H, H, V, H), kron(H, H
                 kron(L, Dia, Dia, R), kron(L, Dia, Dia, L), kron(L, Dia, A, R), kron(L, Dia, A, L), kron(L, A, Dia, R), kron(L, A, Dia, L), 
                 kron(L, A, A, R), kron(L, A, A, L), kron(R, Dia, R, Dia), kron(R, Dia, R, A), kron(R, Dia, L, Dia), kron(R, Dia, L, A), 
                 kron(R, A, R, Dia), kron(R, A, R, A), kron(R, A, L, Dia), kron(R, A, L, A), kron(L, Dia, R, Dia), kron(L, Dia, R, A), 
-                kron(L, Dia, L, Dia), kron(L, Dia, L, A), kron(L, A, R, Dia), kron(L, A, R, A), kron(L, A, L, Dia), kron(L, A, L, A)];
+                kron(L, Dia, L, Dia), kron(L, Dia, L, A), kron(L, A, R, Dia), kron(L, A, R, A), kron(L, A, L, Dia), kron(L, A, L, A)];=#
+statevars = [H, V, Dia, A, R, L];
+StateMeasured = [kron(i,j,k,l) for i in statevars, j in statevars, k in statevars, l in statevars];
 
 PredictionPart = [];
 @time for i = 1:length(StateMeasured)
@@ -304,3 +349,5 @@ PredictionPart = [];
 end
 
 BadnessPolynomial = sum((PredictionPart[i] - Data[i])^2 /PredictionPart[i] for i=1:length(StateMeasured));
+
+temp = [];
