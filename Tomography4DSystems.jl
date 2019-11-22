@@ -1,27 +1,14 @@
-using Base.Iterators, LinearAlgebra;
-#using DataFrames;
-using JuMP;
+using Base.Iterators, LinearAlgebra, Optim;
 import DelimitedFiles.readdlm;
 
-#Create a JuMP model
-model = Model();
-
-#Here is the tensor product definition
-#CircleTimes = kron;
-tp(m1, m2) = partition(flatten(m1 .* m2),2);
-
-n=4;
-#@variable(model, Im)
-#@NLconstraint(model, Im^2 == -1)
-#Define the single qubit measurements, R is the state with "-i"..
+n = 4;
 H = [1, 0];
 V = [0, 1];
 Dia = [1/sqrt(2), 1/sqrt(2)];
 A = [1/sqrt(2), -1/sqrt(2)];
 R = [1/sqrt(2), -im/sqrt(2)];
-#R = [1/sqrt(2), -Im/sqrt(2)];
 L = [1/sqrt(2), im/sqrt(2)];
-#L = [1/sqrt(2), Im/sqrt(2)];
+statevars = [H, V, Dia, A, R, L];
 
 HadamardMatrix_2 = [1/sqrt(2) 1/sqrt(2); 1/sqrt(2) -1/sqrt(2)];
 PauliMatrix_1 = [0 1; 1 0];
@@ -29,47 +16,44 @@ PauliMatrix_1 = [0 1; 1 0];
 Trafo = kron(HadamardMatrix_2 .* Matrix{Float64}(I, 2,2), PauliMatrix_1 * HadamardMatrix_2);
 NDimensions = 4;
 
-#@variable(model, t[1:16])
-@variable(model, t_Re[1:16])
-@variable(model, t_Im[1:16])
-
-pM = [t_Re[1] 0 0 0;
-    t_Re[5] + t_Im[6]  t_Re[2] 0 0;
-    t_Re[11] + t_Im[12] t_Re[7] + t_Im[8] t_Re[3] 0;
-    t_Re[15] + t_Im[16] t_Re[13] + t_Im[14] t_Re[9] + t_Im[10] t_Re[4]];
-
-pMd = [t_Re[1] t_Re[5] + t_Im[6] t_Re[11] + t_Im[12] t_Re[15] + t_Im[16];
-    0 t_Re[2] t_Re[7] + t_Im[8] t_Re[13] + t_Im[14];
-    0 0 t_Re[3] t_Re[9] + t_Im[10];
-    0 0 0 t_Re[4]];
-
-#=
-pM = [t[1] 0 0 0;
-    t[5] + Im*t[6]  t[2] 0 0;
-    t[11] + Im*t[12] t[7] + Im*t[8] t[3] 0;
-    t[15] + Im*t[16] t[13] + Im*t[14] t[9] + Im*t[10] t[4]];
-
-pMd = [t[1] t[5] + Im*t[6] t[11] + Im*t[12] t[15] + Im*t[16];
-    0 t[2] t[7] + Im*t[8] t[13] + Im*t[14];
-    0 0 t[3] t[9] + Im*t[10];
-    0 0 0 t[4]];
-=#
-
-GeneralDM = pMd*pM;
-Prediction(DM, State) = State' .* DM .* State;
-
 D2Array = readdlm("D:\\Binto\\ddd\\Julia\\Tomography_Mathematica_to_Julia\\measurement_bases_full_edit_measurement_7.txt", skipstart=2)[1:end,2:5];
 Data = collect(flatten(D2Array));
 SigmaData = sqrt.(Data);
 
-statevars = [H, V, Dia, A, R, L];
+function BadnessPolynomial!(t)
+    pM = [t[1] 0 0 0;
+        t[5] + im*t[6]  t[2] 0 0;
+        t[11] + im*t[12] t[7] + im*t[8] t[3] 0;
+        t[15] + im*t[16] t[13] + im*t[14] t[9] + im*t[10] t[4]];
 
-#StateMeasured = collect(partition(flatten([kron(i,j) for i in statevars, j in statevars]),4));
-StateMeasured = [kron(i,j) for i in statevars, j in statevars];
-
-PredictionPart = [];
-@time for i = 1:length(StateMeasured)
-    push!(PredictionPart, Prediction(GeneralDM, real(StateMeasured[i])));
+    pMd = [t[1] t[5] + im*t[6] t[11] + im*t[12] t[15] + im*t[16];
+        0 t[2] t[7] + im*t[8] t[13] + im*t[14];
+        0 0 t[3] t[9] + im*t[10];
+        0 0 0 t[4]];
+    
+    global GeneralDM = pMd * pM;
+    Prediction(DM, State) = sum(conj(State) .* DM .* State);
+    StateMeasured = [kron(i,j) for i in statevars, j in statevars];
+    #global PredictionPart = [sum(conj(StateMeasured[i]) .* GeneralDM .* StateMeasured[i]) for i = 1:length(StateMeasured)];
+    PredictionPart = [];
+    for i = 1:length(StateMeasured)
+        push!(PredictionPart, Prediction(GeneralDM, StateMeasured[i]));
+    end
+    return BD = real(sum((PredictionPart[i] - Data[i])^2 /PredictionPart[i] for i=1:length(StateMeasured)))
 end
+lower = fill(-5.0, 16);
+upper = fill(5.0, 16);
+t0 = fill(0.05, 16);
+#t0 = randn(16)
+#@time res = optimize(BadnessPolynomial!, t0, NelderMead(), Optim.Options(g_tol = 10e-10, iterations = 20000))
+#@time res = optimize(BadnessPolynomial!, t0, LBFGS(), Optim.Options(iterations = 20000)) #Requires a function and gradient (will be approximated if omitted)
+inner_optimizer = GradientDescent()
+@time res = optimize(BadnessPolynomial!, lower, upper, t0, Fminbox(inner_optimizer), Optim.Options(iterations = 50000)) #Box constrained minimization
+temp = Optim.minimizer(res);
 
-BadnessPolynomial = sum((PredictionPart[i] - Data[i])^2 /PredictionPart[i] for i=1:length(StateMeasured));
+MaxLikDM = GeneralDM/tr(GeneralDM)
+
+n1 = 0;
+n2 = 6;
+n3 = 4;
+n4 = 4;
