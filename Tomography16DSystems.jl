@@ -1,25 +1,25 @@
 
 #Maximum Likelihood Estimation for 16 dimensional systems
 
-using Base.Iterators, LinearAlgebra, Optim;
+using Base.Iterators, LinearAlgebra, Optim, Plotly;
 import DelimitedFiles.readdlm;
 
 #Here is the tensor product definition
 #CircleTimes = kron;
 tp(m1, m2) = partition(flatten(m1 .* m2),2);
 
-n=16;
-#Define the single qubit measurements, R is the state with "-i"..
-H = [1, 0];
-V = [0, 1];
-Dia = [1/sqrt(2), 1/sqrt(2)];
-A = [1/sqrt(2), -1/sqrt(2)];
-R = [1/sqrt(2), -im/sqrt(2)];
-L = [1/sqrt(2), im/sqrt(2)];
+n = Int64(16);
+#Define the single qubit measurements, R is the state with "-i".
+H = Float64[1, 0];
+V = Float64[0, 1];
+Dia = Float64[1/sqrt(2), 1/sqrt(2)];
+A = Float64[1/sqrt(2), -1/sqrt(2)];
+R = ComplexF64[1/sqrt(2), -im/sqrt(2)];
+L = ComplexF64[1/sqrt(2), im/sqrt(2)];
 statevars = [H, V, Dia, A, R, L];
 
-HadamardMatrix_2 = [1/sqrt(2) 1/sqrt(2); 1/sqrt(2) -1/sqrt(2)];
-PauliMatrix_1 = [0 1; 1 0];
+HadamardMatrix_2 = Float64[1/sqrt(2) 1/sqrt(2); 1/sqrt(2) -1/sqrt(2)];
+PauliMatrix_1 = Float64[0 1; 1 0];
 
 Trafo = kron(HadamardMatrix_2, Matrix{Float64}(I, 2,2), Matrix{Float64}(I, 2,2), PauliMatrix_1 * HadamardMatrix_2);
 NDimensions = 16;
@@ -91,3 +91,94 @@ t0 = fill(0.05, 256); #initial points
 #inner_optimizer = GradientDescent()
 #@time res = optimize(BadnessPolynomial!, lower, upper, t0, Fminbox(inner_optimizer), Optim.Options(iterations = 10)) #Box constrained minimization
 #temp = Optim.minimizer(res);
+
+MaxLikDM = GeneralDM/tr(GeneralDM);
+n1 = 0;
+n2 = 6;
+n3 = 4;
+n4 = 4;
+
+IdealDM = [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 1/2 0.0 0.0 -(1/2) 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 -(1/2) 0.0 0.0 1/2 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0];
+
+IdealDMIm = [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0;
+    0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0];
+
+Fidelity = tr(MaxLikDM.*IdealDM);
+Fidelity2 = tr((MaxLikDM^1/2 .* IdealDM .* MaxLikDM^1/2)^1/2)^2;
+Purity = tr(MaxLikDM.*MaxLikDM);
+LinearEntropy = n/(n - 1)*(1 - Purity);
+
+#=function plotme3d(dta)
+    x = [];
+    y = [];
+    re_z = [];
+    im_z = [];
+    for i = 1:size(dta)[1]
+        for j = 1:size(dta)[1]
+            push!(x, i);
+            push!(y, j);
+            push!(re_z, real(dta[i,j]));
+            push!(im_z, imag(dta[i,j]));
+        end
+    end
+    p1 = plot([scatter3d(x = x, y = y, z = re_z, mode = "markers", marker = attr(size = 5), name = "Real part")])
+    p2 = plot([scatter3d(x = x, y = y, z = im_z, mode = "markers", marker = attr(size = 5), name = "Imaginary part")])
+    [p1, p2]
+end =#
+
+function plotme3d(dta)
+    x = [];
+    y = [];
+    re_z = [];
+    im_z = [];
+    for i = 1:size(dta)[1]
+        for j = 1:size(dta)[1]
+            push!(x, i);
+            push!(y, j);
+            push!(re_z, real(dta[i,j]));
+            push!(im_z, imag(dta[i,j]));
+        end
+    end
+
+    trace1 = scatter3d(x = x, y = y, z = re_z, mode = "markers", marker = attr(size = 5), name = "Real part");
+    trace2 = scatter3d(x = x, y = y, z = im_z, mode = "markers", marker = attr(size = 5), name = "Imaginary part");
+    layout = Layout(xaxis = attr(tickvals=[1,7,10,16], ticktext = ["HHHH", "HVVH", "VHHV", "VVVV"]),
+            yaxis = attr(tickvals=[1,7,10,16], ticktext = ["HHHH", "HVVH", "VHHV", "VVVV"]));
+    #plot([trace1, trace2])
+    p1 = plot(trace1, layout);
+    p2 = plot(trace2, layout);
+    [p1, p2]
+end
+
+
+plotme3d(MaxLikDM)
+plotme3d(IdealDM)
