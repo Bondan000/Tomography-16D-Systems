@@ -3,6 +3,7 @@ using Base.Iterators, LinearAlgebra, Optim, Plotly;
 import DelimitedFiles.readdlm;
 
 NDimensions = Int64(16);
+
 #Define the single qubit measurements, R is the state with "-i".
 H = Float64[1, 0];
 V = Float64[0, 1];
@@ -23,12 +24,11 @@ for a in 1:length(Trafos)
     end
 end
 
-
 #Here are the specific states and data measured in the tomography experiment
-D2Array = readdlm("D:\\myJulia\\measurement_bases_full_edit_measurement_7B.txt", skipstart=2)[1:end,2:17];
+D2Array = readdlm("D:\\Binto\\ddd\\Julia\\Tomography_Mathematica_to_Julia\\measurement_bases_full_edit_measurement_7B.txt", skipstart=2)[1:end,2:17];
 Data = collect(flatten(D2Array));
 
-function BadnessPolynomial!(t)
+function BadnessPolynomial(t)
     pM = [t[1] 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0;
         t[17] + im*t[18] t[2] 0 0 0 0 0 0 0 0 0 0 0 0 0 0;
         t[47] + im*t[48] t[19] + im*t[20] t[3] 0 0 0 0 0 0 0 0 0 0 0 0 0;
@@ -55,41 +55,37 @@ function BadnessPolynomial!(t)
     return real(BD)
 end
 
-
-lower = fill(-0.6, 256);
-upper = fill(0.6, 256);
+lower = fill(-50., 256); 
+upper = fill(50., 256);
 #t0 = vcat(fill(0.01, NDimensions), fill(0, NDimensions*(NDimensions-1))); #initial point
 #t0[7] = 1/sqrt(2); t0[87]= -1/sqrt(2);
 t0 = vcat(fill(1/4, NDimensions), fill(0, NDimensions*(NDimensions-1))); #initial point
+#t0 = vcat(fill(1e-5, NDimensions), fill(0, NDimensions*(NDimensions-1)));
 
-print("Starting calculations.");
-#took  92secs for 20000 iterations! reached max iterations
-#@time res = optimize(BadnessPolynomial!, t0, NelderMead(), Optim.Options(iterations = 200000))
-#took 77secs for 20000 iterations! reached max iterations!
-#@time res = optimize(BadnessPolynomial!, t0, SimulatedAnnealing(), Optim.Options(iterations = 20000))
-#took 10mins for 20000 iterations! objective increased between iterations!
-#@time res = optimize(BadnessPolynomial!, t0, LBFGS(), Optim.Options(iterations = 20000))
-#took 15mins! solution in 6 iterations!
-inner_optimizer = GradientDescent()
-@time res = optimize(BadnessPolynomial!, lower, upper, t0, Fminbox(inner_optimizer), Optim.Options(iterations = 100)) #Box constrained minimization
+print("Starting calculations...\n");
+@time res = optimize(BadnessPolynomial, t0, LBFGS(), Optim.Options(g_tol = 1e-4, show_trace=true))
+#@time res = optimize(BadnessPolynomial, t0, LBFGS(), Optim.Options(x_tol = 1e-6, f_tol = 1e-6, g_tol = 1e-6, show_trace=true))
+#inner_optimizer = GradientDescent()
+#@time res = optimize(BadnessPolynomial, lower, upper, t0, Fminbox(inner_optimizer), Optim.Options(g_tol = 1e-4, iterations = 20, show_trace=true)) #Box constrained minimization
 #temp = Optim.minimizer(res);
+#@time res = optimize(BadnessPolynomial, t0, ParticleSwarm(; lower=[], upper=[], n_particles=100), Optim.Options(iterations = 10000, x_tol = 1e-6, f_tol = 1e-6, show_trace=true))
 
-MaxLikDM = GeneralDM/tr(GeneralDM);
+MaxLikDM = GeneralDM/tr(GeneralDM); 
 
 GHZ = (kron(H,V,V,H)-kron(V,H,H,V))/sqrt(2);
-IdealDM = reshape(kron(GHZ, conj( GHZ)),(NDimensions,NDimensions)) 
+IdealDM = reshape(kron(GHZ, conj( GHZ)),(NDimensions,NDimensions));
 
-Fidelity = tr(MaxLikDM.*IdealDM);
-Fidelity2 = tr((MaxLikDM^1/2 .* IdealDM .* MaxLikDM^1/2)^1/2)^2;
-Purity = tr(MaxLikDM.*MaxLikDM);
+Fidelity = real(tr(MaxLikDM.*IdealDM));
+Fidelity2 = real(tr((MaxLikDM^1/2 .* IdealDM .* MaxLikDM^1/2)^1/2)^2);
+Purity = real(tr(MaxLikDM.*MaxLikDM));
 LinearEntropy = NDimensions/(NDimensions - 1)*(1 - Purity);
 
-#=
 function plotme3d(dta)
     x = [];
     y = [];
     re_z = [];
     im_z = [];
+
     for i = 1:size(dta)[1]
         for j = 1:size(dta)[1]
             push!(x, i);
@@ -109,6 +105,5 @@ function plotme3d(dta)
     [p1, p2]
 end
 
-plotme3d(MaxLikDM)
-plotme3d(IdealDM)
- =#
+plotme3d(MaxLikDM) |> display
+#plotme3d(IdealDM)
